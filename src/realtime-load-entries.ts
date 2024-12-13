@@ -60,12 +60,6 @@ export async function realtimeLoadEntries(options: PocketBaseLoaderOptions,
                 headers: collectionHeaders
             }
         );
-
-        console.log(`${collectionUrl}?page=${page}&perPage=100${realTimeLastModified
-                ? `&sort=-updated,id&filter=(updated>"${realTimeLastModified}")`
-                : ""
-            }`);
-
         // If the request was not successful, print the error message and return
         if (!collectionRequest.ok) {
             // If the collection is locked, an admin token is required
