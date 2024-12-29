@@ -63,6 +63,7 @@ export function pocketbaseLoader(options: PocketBaseLoaderOptions): Loader {
         "last-modified",
         new Date().toISOString().replace("T", " ")
       );
+      context.meta.set("realtime-last-modified", new Date().toISOString().replace('T', ' '));
 
       context.meta.set("version", packageJson.version);
     },

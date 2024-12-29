@@ -22,6 +22,12 @@ export interface PocketBaseLoaderOptions {
    */
   idField?: string;
   /**
+   * Field should be an array of collections to be watched for realtime events.
+   *
+   * if the field is not provided, the collectionName will be used.
+   */
+  watchCollections?: Array<string>;
+  /**
    * Name of the field(s) containing the content of an entry.
    * This must be the name of a field in the PocketBase collection that contains the content.
    * The content will be parsed as HTML and rendered to the page.

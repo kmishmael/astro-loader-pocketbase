@@ -1,6 +1,9 @@
 import type { LoaderContext } from "astro/loaders";
 import type { PocketBaseLoaderOptions } from "./types/pocketbase-loader-options.type";
 import { parseEntry } from "./utils/parse-entry";
+import { EventSource } from 'eventsource';
+import { realtimeLoadEntries } from "./realtime-load-entries";
+import { cleanupEntries } from "./cleanup-entries";
 
 /**
  * Load (modified) entries from a PocketBase collection.
@@ -43,6 +46,9 @@ export async function loadEntries(
   let page = 0;
   let totalPages = 0;
   let entries = 0;
+
+  // @ts-expect-error import.meta not being recognized
+  const isDev = import.meta.env.DEV;
 
   // Fetch all (modified) entries
   do {
@@ -89,6 +95,58 @@ export async function loadEntries(
     totalPages = response.totalPages;
     entries += response.items.length;
   } while (page < totalPages);
+
+  if (isDev) {
+
+    const evtSource = new EventSource(`${options.url}/api/realtime/`);
+    const watchCollections = options.watchCollections ? options.watchCollections : [options.collectionName];
+
+    evtSource.addEventListener("PB_CONNECT", (e) => {
+      const data = JSON.parse(e.data);
+      const client_id = data.clientId;
+      fetch(`${options.url}/api/realtime/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': adminToken || ""
+        },
+        body: JSON.stringify({
+          "clientId": client_id,
+          "subscriptions": watchCollections
+        })
+      })
+        .then(response => {
+          if (response.status === 204) {
+            return null;
+          }
+          return response.json();
+        })
+        .catch(error => console.error('Error:', error.message));
+    });
+
+    watchCollections.forEach((collection: string) => {
+      evtSource.addEventListener(collection, (e) => {
+        try {
+          const eventData = JSON.parse(e.data);
+
+          if (eventData.action === 'delete') {
+            if (context.store.keys().length > 0) {
+              cleanupEntries(options, context, adminToken).catch((error) => {
+                context.logger.error(`Cleanup failed: ${error.message}`);
+              });
+            }
+          } else {
+            realtimeLoadEntries(options, context, eventData.action, hasUpdatedColumn, adminToken).catch((error) => {
+              context.logger.error(`Realtime loading failed: ${error.message}`);
+            });
+          }
+        } catch (error) {
+          console.error('Error handling event:', (error as Error).message);
+        }
+      });
+    });
+
+  }
 
   // Log the number of fetched entries
   context.logger.info(
