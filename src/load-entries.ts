@@ -108,7 +108,7 @@ export async function loadEntries(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': adminToken || ""
+          'Authorization': superuserToken || ""
         },
         body: JSON.stringify({
           "clientId": client_id,
@@ -131,12 +131,12 @@ export async function loadEntries(
 
           if (eventData.action === 'delete') {
             if (context.store.keys().length > 0) {
-              cleanupEntries(options, context, adminToken).catch((error) => {
+              cleanupEntries(options, context, superuserToken).catch((error) => {
                 context.logger.error(`Cleanup failed: ${error.message}`);
               });
             }
           } else {
-            realtimeLoadEntries(options, context, eventData.action, hasUpdatedColumn, adminToken).catch((error) => {
+            realtimeLoadEntries(options, context, eventData.action, superuserToken).catch((error) => {
               context.logger.error(`Realtime loading failed: ${error.message}`);
             });
           }

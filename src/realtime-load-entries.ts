@@ -16,12 +16,11 @@ import type { PocketBaseRealtimeActions } from "./types/pocketbase-realtime-acti
 export async function realtimeLoadEntries(options: PocketBaseLoaderOptions,
     context: LoaderContext,
     action: PocketBaseRealtimeActions,
-    hasUpdatedColumn: boolean,
-    adminToken: string | undefined) {
+    superuserToken: string | undefined) {
 
 
     //TODO: Consider possibility of using trigger record updatedAt - should be simpler but with one caveat I can think of
-    const realTimeLastModified = hasUpdatedColumn ? context.meta.get("realtime-last-modified") : undefined;
+    const realTimeLastModified = context.meta.get("realtime-last-modified");
 
     const collectionUrl = new URL(
         `api/collections/${options.collectionName}/records`,
@@ -30,15 +29,15 @@ export async function realtimeLoadEntries(options: PocketBaseLoaderOptions,
 
     // Create the headers for the request to append the admin token (if available)
     const collectionHeaders = new Headers();
-    if (adminToken) {
-        collectionHeaders.set("Authorization", adminToken);
+    if (superuserToken) {
+        collectionHeaders.set("Authorization", superuserToken);
     }
 
     // Log the fetching of the entries
     context.logger.info(
         `[TRIGGER=${action}]:Realtime Fetching${realTimeLastModified ? " modified" : ""} data for ${context.collection
         } from ${collectionUrl}${realTimeLastModified ? ` starting at ${realTimeLastModified}` : ""
-        }${adminToken ? " with admin token" : ""}`
+        }${superuserToken ? " as superuser" : ""}`
     );
 
     // Prepare pagination variables
@@ -83,7 +82,7 @@ export async function realtimeLoadEntries(options: PocketBaseLoaderOptions,
 
         // Parse and store the entries
         for (const entry of response.items) {
-            await parseEntry(entry, context, options.id, options.content);
+            await parseEntry(entry, context, options);
 
             // Check if the entry has an `updated` column
             // This is used to enable the incremental fetching of entries
